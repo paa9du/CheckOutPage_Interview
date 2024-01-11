@@ -52,6 +52,9 @@ class _SuccessfullPageState extends State<SuccessfullPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 165, 70, 63),
+      appBar: AppBar(
+        backgroundColor: Color.fromARGB(255, 165, 70, 63),
+      ),
       body: Center(
         child: _showRightMark
             ? _buildRightMark()

@@ -13,46 +13,61 @@ class _CheckOutPageState extends State<CheckOutPage>
     with TickerProviderStateMixin {
   bool _showCardDetails = false;
   int _currentState = 0;
-  bool _showRightMark = false;
+  bool _showRightMark = true;
   bool _isCardProcessing = false;
   bool allFieldsFilled = false;
+  TextEditingController _textFieldController = TextEditingController();
+  bool isTextFieldFilled = false;
+  late PageController _pageController;
+  PageController pageController = PageController(viewportFraction: 0.85);
 
+  Color getArrowIconColor() {
+    return _areAllFieldsFilled()
+        ? Colors.green
+        : Color.fromARGB(255, 168, 166, 166);
+  }
+
+  late AnimationController _circleAnimationController;
   late AnimationController _controller1;
   late AnimationController _controller2;
   late AnimationController _controller3;
   ValueNotifier<bool> _showRightMarkNotifier = ValueNotifier<bool>(false);
+
+  bool isAnimationStarted = false;
 
   TextEditingController _cardNumberController = TextEditingController();
   TextEditingController _securityCodeController = TextEditingController();
   TextEditingController _cardHolderController = TextEditingController();
   TextEditingController _expDateController = TextEditingController();
   TextEditingController _zipCodeController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-
+    _pageController = PageController(initialPage: 0);
     _controller1 =
-        AnimationController(duration: Duration(seconds: 2), vsync: this);
+        AnimationController(duration: Duration(seconds: 1), vsync: this);
     _controller2 =
-        AnimationController(duration: Duration(seconds: 2), vsync: this);
+        AnimationController(duration: Duration(seconds: 1), vsync: this);
     _controller3 =
-        AnimationController(duration: Duration(seconds: 5), vsync: this);
+        AnimationController(duration: Duration(seconds: 3), vsync: this);
 
-    _controller1.forward();
+    //  _controller1.forward();
     _controller1.addListener(() {
+      print("Controller 1 Status: ${_controller1.status}");
       if (_controller1.status == AnimationStatus.completed) {
         _controller2.forward();
       }
     });
 
     _controller2.addListener(() {
+      print("Controller 2 Status: ${_controller2.status}");
       if (_controller2.status == AnimationStatus.completed) {
         _controller3.forward();
       }
     });
 
     _controller3.addListener(() {
+      print("Controller 3 Status: ${_controller3.status}");
       if (_controller3.status == AnimationStatus.completed) {
         setState(() {
           _showRightMark = true;
@@ -61,10 +76,17 @@ class _CheckOutPageState extends State<CheckOutPage>
             true; // Notify when the right mark is visible
       }
     });
+
+    _textFieldController.addListener(() {
+      setState(() {
+        isTextFieldFilled = _textFieldController.text.isNotEmpty;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _pageController.dispose();
     _controller1.dispose();
     _controller2.dispose();
     _controller3.dispose();
@@ -77,16 +99,38 @@ class _CheckOutPageState extends State<CheckOutPage>
     _zipCodeController.dispose();
   }
 
+  void _startAnimation() {
+    _controller1.reset();
+    _controller2.reset();
+    _controller3.reset();
+    _showRightMark =
+        true; // Resetting the state to false before starting animations
+
+    // Start the animations after resetting
+    _controller1.forward().then((_) {
+      _controller2.forward().then((_) {
+        _controller3.forward().then((_) {
+          setState(() {
+            _showRightMark =
+                true; // Set _showRightMark to true after all animations complete
+          });
+        });
+      });
+    });
+  }
+
+  void _onArrowTapped() {
+    if (!_isCardProcessing) {
+      // Assuming _isCardProcessing indicates whether the animation is ongoing.
+      _startAnimation(); // Start the animation sequence
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(
-          color: Colors.black,
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        leading: null,
         backgroundColor: Colors.white,
         title: const Center(
           child: Text(
@@ -197,23 +241,33 @@ class _CheckOutPageState extends State<CheckOutPage>
   }
 
   Widget _buildContainer(bool showRightMark) {
-    return Container(
-      height: 55,
-      decoration: BoxDecoration(
-        color: showRightMark
-            ? Colors.green
-            : const Color.fromARGB(255, 168, 20, 10),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: showRightMark ? Colors.green : Colors.red),
-      ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
+    return GestureDetector(
+      onTap: showRightMark
+          ? null
+          : () {
+              // Your onTap logic here when the container is enabled
+              print('Pay It tapped!');
+            },
+      child: Container(
+        height: 55,
+        decoration: BoxDecoration(
+          color: showRightMark ? Colors.green : Colors.red,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: showRightMark
+                  ? Colors.green
+                  : Colors.red), // Adjust border color if needed
+        ),
+        child: Center(
+          child: Text(
             'Pay It',
-            style: TextStyle(color: Colors.white, fontSize: 20),
+            style: TextStyle(
+              color: Colors
+                  .white, // Keeping it white for readability; adjust as needed
+              fontSize: 20,
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -283,49 +337,19 @@ class _CheckOutPageState extends State<CheckOutPage>
     );
   }
 
+  bool _isRightIconVisible = false;
   Widget _buildAddNewCard() {
     return GestureDetector(
       onTap: () {
         setState(() {
-          // _showCardDetails = true;
+          _isRightIconVisible = true;
+          _showCardDetails = true;
           _currentState = 1;
         });
       },
-      child: _showCardDetails
+      child: (_showCardDetails && _isRightIconVisible)
           ? _buildDetailedCard()
-          : Container(
-              height: 200,
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 251, 229, 228),
-                borderRadius: BorderRadius.circular(20.0),
-                border: Border.all(
-                  color: const Color.fromARGB(255, 168, 20, 10),
-                ),
-              ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Color.fromARGB(255, 168, 20, 10),
-                    radius: 29,
-                    child: Icon(
-                      Icons.add,
-                      size: 35,
-                    ),
-                  ),
-                  SizedBox(
-                    height: 9,
-                  ),
-                  Text(
-                    "Add a new Card",
-                    style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 19),
-                  ),
-                ],
-              ),
-            ),
+          : _buildAddNewCardContainer(),
     );
   }
 
@@ -338,112 +362,186 @@ class _CheckOutPageState extends State<CheckOutPage>
   }
 
   Widget _buildDetailedCard() {
-    //   bool areFieldsFilled = _areFieldsFilled();
     Color boxColor = allFieldsFilled
         ? Colors.green
         : const Color.fromARGB(255, 168, 166, 166);
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 44, 60, 26),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Stack(
+    return SingleChildScrollView(
+      controller: pageController,
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildCreditCardDetails("Credit Card Number"),
-                  _buildCreditCardDetails("Security Code"),
-                ],
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 200,
-                    child: _buildTextField(0),
-                  ),
-                  Container(
-                    width: 120,
-                    child: _buildTextField(1),
-                  ),
-                ],
-              ),
-              _buildCreditCardDetails("Card Holder"),
-              Padding(
-                padding: const EdgeInsets.only(right: 95),
-                child: _buildTextField(2),
-              ),
-              Row(
-                children: [
-                  _buildCreditCardDetails("Exp. Date"),
-                  _buildCreditCardDetails("Zip Code"),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                      left: 65,
-                      top: 45,
+          ConstrainedBox(
+            constraints:
+                BoxConstraints(maxWidth: 330), // set your maximum width
+            child: _buildCardContainer(),
+          ),
+          SizedBox(width: 2),
+          if (!_showRightMark)
+            ConstrainedBox(
+              constraints:
+                  BoxConstraints(maxWidth: 330), // set your maximum width
+              child: _buildAddNewCardContainer(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardContainer() {
+    // Your card container logic remains unchanged.
+    return Padding(
+      padding: const EdgeInsets.only(left: 0.0,right: 0.0,top: 8.0,bottom: 8.0),
+      child: Container(
+        height: 200,
+        width: 350,
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 44, 60, 26),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildCreditCardDetails("Credit Card Number"),
+                    _buildCreditCardDetails("Security Code"),
+                  ],
+                ),
+                Row(
+                //  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      width: 230,
+                      child: _buildTextField(0),
                     ),
-                    child: Text(
-                      "VISA",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: 100,
+                      child: _buildTextField(1),
+                    ),
+                  ],
+                ),
+                _buildCreditCardDetails("Card Holder"),
+                Padding(
+                  padding: const EdgeInsets.only(right: 95),
+                  child: _buildTextField(2),
+                ),
+                Row(
+                  children: [
+                    _buildCreditCardDetails("Exp. Date"),
+                    _buildCreditCardDetails("Zip Code"),
+                    const Padding(
+                      padding: EdgeInsets.only(
+                        left: 65,
+                        top: 45,
+                      ),
+                      child: Text(
+                        "VISA",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 100,
-                    child: _buildTextField(3),
-                  ),
-                  const SizedBox(width: 5),
-                  Container(
-                    width: 100,
-                    child: _buildTextField(4),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Positioned(
-            top: 80,
-            right: -10,
-            child: GestureDetector(
-              onTap: (!_isCardProcessing && _showRightMark)
-                  &&
-                      _areAllFieldsFilled()
-                  ? () {
+                  ],
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 100,
+                      child: _buildTextField(3),
+                    ),
+                    const SizedBox(width: 5),
+                    Container(
+                      width: 100,
+                      child: _buildTextField(4),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Positioned(
+              top: 80,
+              right: -10,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: GestureDetector(
+                  onTap: () {
+                    if (!_isCardProcessing && _areAllFieldsFilled()) {
+                      _startAnimation();
+                      print("Arrow icon tapped");
                       setState(() {
+                        _showRightMark = true;
                         _currentState = 2;
                       });
                     }
-                  : null,
-              child: _isCardProcessing && _showRightMark
-                  ? null
-                  : Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _areAllFieldsFilled()
-                            ? Colors.green
-                            : Color.fromARGB(255, 168, 166, 166),
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_forward,
-                        color: Colors.black,
-                      ),
-                    ),
+                  },
+                  // : null,
+                  child: _isCardProcessing && !_showRightMark
+                      ? null
+                      : Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: getArrowIconColor(),
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+
+                          // decoration: BoxDecoration(
+                          //   color: _areAllFieldsFilled()
+                          //       ? Colors.green
+                          //       : Color.fromARGB(255, 168, 166, 166),
+                          //   borderRadius: BorderRadius.circular(40),
+                          // ),
+                          child: const Icon(
+                            Icons.arrow_forward,
+                            color: Colors.black,
+                          ),
+                        ),
+                ),
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddNewCardContainer() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Container(
+        height: 200,
+        width: 335,
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 251, 229, 228),
+          borderRadius: BorderRadius.circular(20.0),
+          border: Border.all(
+            color: const Color.fromARGB(255, 168, 20, 10),
           ),
-        ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              backgroundColor: Color.fromARGB(255, 168, 20, 10),
+              radius: 29,
+              child: Icon(
+                Icons.add,
+                size: 35,
+              ),
+            ),
+            SizedBox(height: 9),
+            Text(
+              "Add a new Card",
+              style: TextStyle(
+                  color: Colors.red, fontWeight: FontWeight.bold, fontSize: 19),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -451,9 +549,11 @@ class _CheckOutPageState extends State<CheckOutPage>
   Widget _buildProcessingCard() {
     if (_showRightMark) {
       _isCardProcessing = true;
+
       // If _showRightMark becomes true, wait for 2 seconds and then transition to the detailed card view.
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 6), () {
         setState(() {
+          _showRightMark = false;
           _currentState = 1; // This will show the detailed card view.
         });
       });
@@ -470,11 +570,15 @@ class _CheckOutPageState extends State<CheckOutPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (!_showRightMark) // Show circles only if _showRightMark is false
+          // _buildRightMarkIfNeeded(_controller3),
+          // if (!_showRightMark) _buildRightMark(),
+          if (_controller3.status == AnimationStatus.completed)
+            _buildRightMark(),
+          if (_controller3.status != AnimationStatus.completed)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (!_showRightMark) _buildAnimatedCircle(_controller1),
+                _buildAnimatedCircle(_controller1),
                 SizedBox(width: 10),
                 _buildAnimatedCircle(_controller2),
                 SizedBox(width: 10),
@@ -483,14 +587,16 @@ class _CheckOutPageState extends State<CheckOutPage>
             ),
           SizedBox(height: 9),
           Text(
-            _showRightMark ? "Your card is added" : "Verifying your card",
+            _controller3.status == AnimationStatus.completed
+                ? "Your card is added"
+                : "Verifying your card",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 19,
             ),
           ),
-          if (_showRightMark) // Display the right mark if _showRightMark is true
+          if (!_showRightMark) // Display the right mark if _showRightMark is true
             _buildRightMark(),
         ],
       ),
@@ -501,6 +607,7 @@ class _CheckOutPageState extends State<CheckOutPage>
     return AnimatedBuilder(
       animation: controller,
       builder: (context, child) {
+        // _checkAnimationCompletion();
         if (controller.status == AnimationStatus.completed) {
           // If the animation for the 3rd circle is completed, set _showRightMark to true
           if (controller == _controller3) {
@@ -517,7 +624,18 @@ class _CheckOutPageState extends State<CheckOutPage>
           ),
         );
       },
+      child: _buildRightMarkIfNeeded(controller),
     );
+  }
+
+  Widget _buildRightMarkIfNeeded(AnimationController controller) {
+    if (controller == _controller3 &&
+        controller.status == AnimationStatus.completed) {
+      return _buildRightMark();
+    } else {
+      return SizedBox
+          .shrink(); // Return an empty widget if the conditions are not met
+    }
   }
 
   Widget _buildRightMark() {
@@ -580,6 +698,10 @@ class _CheckOutPageState extends State<CheckOutPage>
         _controller = TextEditingController();
         break;
     }
+
+    _controller.addListener(() {
+      setState(() {}); // Rebuild the widget when text changes
+    });
 
     if (index == 0) {
       // Apply the logic only for the first TextField
