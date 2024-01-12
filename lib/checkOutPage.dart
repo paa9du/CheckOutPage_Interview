@@ -20,6 +20,7 @@ class _CheckOutPageState extends State<CheckOutPage>
   bool isTextFieldFilled = false;
   late PageController _pageController;
   PageController pageController = PageController(viewportFraction: 0.85);
+  bool isCardContainerVisible = true;
 
   Color getArrowIconColor() {
     return _areAllFieldsFilled()
@@ -365,32 +366,51 @@ class _CheckOutPageState extends State<CheckOutPage>
     Color boxColor = allFieldsFilled
         ? Colors.green
         : const Color.fromARGB(255, 168, 166, 166);
-    return SingleChildScrollView(
-      controller: pageController,
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          ConstrainedBox(
-            constraints:
-                BoxConstraints(maxWidth: 330), // set your maximum width
-            child: _buildCardContainer(),
-          ),
-          SizedBox(width: 2),
-          if (!_showRightMark)
-            ConstrainedBox(
-              constraints:
-                  BoxConstraints(maxWidth: 330), // set your maximum width
-              child: _buildAddNewCardContainer(),
+    return Column(
+      children: [
+        NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification scrollInfo) {
+            if (scrollInfo.metrics.pixels >= 332 && !_showRightMark) {
+              setState(() {
+                _showRightMark = true;
+              });
+            } else if (scrollInfo.metrics.pixels < 332 && _showRightMark) {
+              setState(() {
+                _showRightMark = false;
+              });
+            }
+            return true;
+          },
+          child: SingleChildScrollView(
+            controller: pageController,
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ConstrainedBox(
+                  constraints:
+                      BoxConstraints(maxWidth: 330), // set your maximum width
+                  child: _buildCardContainer(),
+                ),
+                SizedBox(width: 2),
+                if (!_showRightMark)
+                  ConstrainedBox(
+                    constraints:
+                        BoxConstraints(maxWidth: 330), // set your maximum width
+                    child: _buildAddNewCardContainer(),
+                  ),
+              ],
             ),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildCardContainer() {
     // Your card container logic remains unchanged.
     return Padding(
-      padding: const EdgeInsets.only(left: 0.0,right: 0.0,top: 8.0,bottom: 8.0),
+      padding:
+          const EdgeInsets.only(left: 0.0, right: 0.0, top: 8.0, bottom: 8.0),
       child: Container(
         height: 200,
         width: 350,
@@ -411,7 +431,7 @@ class _CheckOutPageState extends State<CheckOutPage>
                   ],
                 ),
                 Row(
-                //  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       width: 230,
@@ -661,6 +681,7 @@ class _CheckOutPageState extends State<CheckOutPage>
   Widget _buildTextField(int index) {
     TextEditingController _controller = TextEditingController();
     List<TextInputFormatter> inputFormatters = [];
+
     _controller.addListener(() {
       setState(() {
         TextEditingController _controller = TextEditingController();
@@ -681,21 +702,29 @@ class _CheckOutPageState extends State<CheckOutPage>
     switch (index) {
       case 0:
         _controller = _cardNumberController;
+        //  inputFormatters = [FilteringTextInputFormatter.digitsOnly];
         break;
       case 1:
         _controller = _securityCodeController;
+        inputFormatters = [FilteringTextInputFormatter.digitsOnly];
         break;
       case 2:
         _controller = _cardHolderController;
+        inputFormatters = [
+          FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z]'))
+        ];
         break;
       case 3:
         _controller = _expDateController;
+        //   inputFormatters = [FilteringTextInputFormatter.digitsOnly];
         break;
       case 4:
         _controller = _zipCodeController;
+        inputFormatters = [FilteringTextInputFormatter.digitsOnly];
         break;
       default:
         _controller = TextEditingController();
+
         break;
     }
 
